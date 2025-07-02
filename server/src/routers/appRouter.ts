@@ -15,12 +15,18 @@ export const appRouter = router({
         .transform((fd) => Object.fromEntries(fd.entries()))
         .pipe(
           z.object({
-            resume: z.instanceof(File).refine((f) => f.size > 0),
-            jd: z.instanceof(File).refine((f) => f.size > 0),
+            resume: z
+              .instanceof(File)
+              .refine((f) => f.size <= 5 * 1024 * 1024, {
+                message: "Resume file must be smaller than 5MB",
+              }),
+            jd: z.instanceof(File).refine((f) => f.size <= 5 * 1024 * 1024, {
+              message: "JD file must be smaller than 5MB",
+            }),
           })
         )
     )
-    .mutation(async ({input}) => {
+    .mutation(async ({ input }) => {
       const resume = input.resume;
       const jd = input.jd;
 
@@ -34,14 +40,15 @@ export const appRouter = router({
       const resumeText = await getTextFromPdf(resume);
       const jdText = await getTextFromPdf(jd);
 
-      const prompt: GeminiContentPayload = prompts.resumeAnalyze(resumeText,jdText);
-      
+      const prompt: GeminiContentPayload = prompts.resumeAnalyze(
+        resumeText,
+        jdText
+      );
 
       const result: GeminiResponse = await geminiClient(prompt);
       let response = getParsedDataFromGeminiResponse(result);
       return response;
     }),
-    
 });
 
 export type AppRouter = typeof appRouter;
